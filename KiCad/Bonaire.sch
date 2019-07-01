@@ -1,0 +1,197 @@
+EESchema Schematic File Version 4
+LIBS:Bonaire-cache
+EELAYER 26 0
+EELAYER END
+$Descr USLetter 11000 8500
+encoding utf-8
+Sheet 1 9
+Title ""
+Date ""
+Rev ""
+Comp ""
+Comment1 ""
+Comment2 ""
+Comment3 ""
+Comment4 ""
+$EndDescr
+$Sheet
+S 700  6700 1650 1150
+U 5B10AF12
+F0 "power" 60
+F1 "power.sch" 60
+$EndSheet
+$Sheet
+S 1150 1200 900  650 
+U 5B2171DF
+F0 "GPIOA" 60
+F1 "GPIOA.sch" 60
+F2 "RX485_A(-)" I R 2050 1600 60 
+F3 "RX485_B(+)" I R 2050 1750 60 
+$EndSheet
+$Sheet
+S 1150 2150 900  700 
+U 5B2179B0
+F0 "GPIOB" 60
+F1 "GPIOB.sch" 60
+F2 "485TX" I R 2050 2300 60 
+F3 "485RX" I R 2050 2450 60 
+$EndSheet
+$Sheet
+S 1150 3150 950  650 
+U 5B21C79A
+F0 "GPIOC" 60
+F1 "GPIOC.sch" 60
+$EndSheet
+$Sheet
+S 1150 4150 950  550 
+U 5B21C79D
+F0 "GPIOD" 60
+F1 "GPIOD.sch" 60
+$EndSheet
+$Sheet
+S 1200 5000 950  650 
+U 5B21D278
+F0 "GPIOE" 60
+F1 "GPIOE.sch" 60
+$EndSheet
+$Sheet
+S 1250 5900 950  550 
+U 5B21D27B
+F0 "GPIOF" 60
+F1 "GPIOF.sch" 60
+$EndSheet
+Text Notes 8150 650  0    60   ~ 0
+TOP
+$Comp
+L device:D_Schottky D2
+U 1 1 5B2B9678
+P 6500 1250
+F 0 "D2" H 6500 1350 50  0000 C CNN
+F 1 "D_Schottky" H 6500 1450 50  0000 C CNN
+F 2 "Diode_SMD:D_1206_3216Metric" H 6500 1250 50  0001 C CNN
+F 3 "" H 6500 1250 50  0001 C CNN
+	1    6500 1250
+	1    0    0    -1  
+$EndComp
+$Comp
+L device:D_Schottky D1
+U 1 1 5B2B96C3
+P 6200 1350
+F 0 "D1" H 6200 1450 50  0000 C CNN
+F 1 "D_Schottky" H 6200 1500 50  0000 C CNN
+F 2 "Diode_SMD:D_1206_3216Metric" H 6200 1350 50  0001 C CNN
+F 3 "" H 6200 1350 50  0001 C CNN
+	1    6200 1350
+	-1   0    0    1   
+$EndComp
+$Comp
+L device:R R1
+U 1 1 5B2B977D
+P 5800 1350
+F 0 "R1" V 5700 1350 50  0000 C CNN
+F 1 "0" V 5800 1350 50  0000 C CNN
+F 2 "LED_SMD:LED_1206_3216Metric" V 5730 1350 50  0001 C CNN
+F 3 "" H 5800 1350 50  0001 C CNN
+	1    5800 1350
+	0    -1   -1   0   
+$EndComp
+$Comp
+L power1:+24V #PWR01
+U 1 1 5B2B98DC
+P 5500 1250
+F 0 "#PWR01" H 5500 1100 50  0001 C CNN
+F 1 "+24V" H 5500 1390 50  0000 C CNN
+F 2 "" H 5500 1250 50  0001 C CNN
+F 3 "" H 5500 1250 50  0001 C CNN
+	1    5500 1250
+	0    -1   -1   0   
+$EndComp
+$Comp
+L power1:GND #PWR02
+U 1 1 5B2B9926
+P 5500 1350
+F 0 "#PWR02" H 5500 1100 50  0001 C CNN
+F 1 "GND" H 5500 1200 50  0000 C CNN
+F 2 "" H 5500 1350 50  0001 C CNN
+F 3 "" H 5500 1350 50  0001 C CNN
+	1    5500 1350
+	0    1    1    0   
+$EndComp
+$Comp
+L power1:GNDPWR #PWR03
+U 1 1 5B2B9BD9
+P 6700 1450
+F 0 "#PWR03" H 6700 1250 50  0001 C CNN
+F 1 "GNDPWR" H 6700 1320 50  0000 C CNN
+F 2 "" H 6700 1400 50  0001 C CNN
+F 3 "" H 6700 1400 50  0001 C CNN
+	1    6700 1450
+	1    0    0    -1  
+$EndComp
+Text Label 5850 800  0    60   ~ 0
+RS485A
+Text Label 5700 950  0    60   ~ 0
+RS485B
+$Comp
+L power1:PWR_FLAG #FLG06
+U 1 1 5B2EB86D
+P 6950 1200
+F 0 "#FLG06" H 6950 1275 50  0001 C CNN
+F 1 "PWR_FLAG" H 6950 1350 50  0000 C CNN
+F 2 "" H 6950 1200 50  0001 C CNN
+F 3 "" H 6950 1200 50  0001 C CNN
+	1    6950 1200
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	6650 1250 7050 1250
+Wire Wire Line
+	2050 1600 2600 1600
+Wire Wire Line
+	2600 1600 2600 800 
+Wire Wire Line
+	2600 800  7850 800 
+Wire Wire Line
+	7850 800  7850 1250
+Wire Wire Line
+	7850 1250 8250 1250
+Wire Wire Line
+	2050 1750 2800 1750
+Wire Wire Line
+	2800 1750 2800 950 
+Wire Wire Line
+	2800 950  7700 950 
+Wire Wire Line
+	7700 950  7700 1350
+Wire Wire Line
+	7700 1350 8250 1350
+Wire Wire Line
+	6350 1350 6700 1350
+Wire Wire Line
+	6050 1350 5950 1350
+Wire Wire Line
+	5650 1350 5500 1350
+Wire Wire Line
+	6350 1250 5500 1250
+Wire Wire Line
+	6700 1350 6700 1450
+Connection ~ 6700 1350
+Wire Wire Line
+	6950 1200 6950 1350
+Connection ~ 6950 1350
+Wire Wire Line
+	6700 1350 6950 1350
+Wire Wire Line
+	6950 1350 7050 1350
+$Comp
+L Connector_Generic:Conn_01x04 J4
+U 1 1 5C8291D1
+P 7250 1350
+F 0 "J4" H 7330 1342 50  0000 L CNN
+F 1 "Conn_01x04" H 7330 1251 50  0000 L CNN
+F 2 "CH20M:CH20Mt" H 7250 1350 50  0001 C CNN
+F 3 "~" H 7250 1350 50  0001 C CNN
+	1    7250 1350
+	1    0    0    -1  
+$EndComp
+$EndSCHEMATC

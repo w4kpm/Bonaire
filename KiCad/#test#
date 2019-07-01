@@ -1,0 +1,18 @@
+mv ./Helios.pro			./Bonaire.pro		  
+mv ./Helios.kicad_pcb-bak	./Bonaire.kicad_pcb-bak	  
+mv ./Helios.bak			./Bonaire.bak		  
+mv ./Helios.rules		./Bonaire.rules		  
+mv ./Helios.net			./Bonaire.net		  
+mv ./Helios.xml			./Bonaire.xml		  
+mv ./Helios.sch			./Bonaire.sch		  
+mv ./Helios.dsn			./Bonaire.dsn		  
+mv ./Helios.ses			./Bonaire.ses		  
+mv ./Helios.csv			./Bonaire.csv		  
+mv ./Helios.kicad_pcb       	./Bonaire.kicad_pcb       
+
+
+
+
+
+
+

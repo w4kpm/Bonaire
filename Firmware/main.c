@@ -88,15 +88,6 @@ size_t nx = 0, ny = 0;
 
 
 
-static const SPIConfig std_spicfg0 = {
-  NULL,
-  NULL,
-  GPIOC,                                                        /*port of CS  */
-  5,                                                /*pin of CS   */
-
-  0,
-  SPI_CR2_DS_2 | SPI_CR2_DS_1 | SPI_CR2_DS_0                    /*CR2 register*/
-};
 
 static const SPIConfig std_spicfg3 = {
   NULL,
@@ -104,7 +95,7 @@ static const SPIConfig std_spicfg3 = {
   GPIOB,                                                        /*port of CS  */
   SPISELECT,                                                /*pin of CS   */
   //SPI_CR1_CPOL|	SPI_CR1_CPHA |		\
-  //SPI_CR1_SPE|SPI_CR1_MSTR,
+  //SPI_CR1_SPE|SPI_CR1_MSTR|SPI_CR1_BR_2,SPI_CR1_BR_1,
   0,
   SPI_CR2_DS_2 | SPI_CR2_DS_1 | SPI_CR2_DS_0                    /*CR2 register*/
 };
@@ -132,30 +123,31 @@ uint32_t checksum()
 
 
 
-void spi_write(location,data,cp)
+void spi_write(location,data)
 {
-    palClearPad(GPIOC,cp);
-    spiStart(&SPID3,&std_spicfg0);
-    spiSelect(&SPID3);
+  //palClearPad(GPIOB,SPISELECT);
+    spiStart(&SPID2,&std_spicfg3);
+    spiSelect(&SPID2);
     txbuf[0] = location;
     txbuf[1] = data;
-    spiSend(&SPID3,2,&txbuf);
-    spiUnselect(&SPID3);
-    spiStop(&SPID3);
-    palSetPad(GPIOC,cp);
+    spiSend(&SPID2,2,&txbuf);
+    spiUnselect(&SPID2);
+    spiStop(&SPID2);
+    //palSetPad(GPIOB,SPISELECT);
 }
 
-void spi_read(location,cp)
+uint8_t spi_read(location)
 {
-    palClearPad(GPIOC,cp);
-    spiStart(&SPID3,&std_spicfg0);
-    spiSelect(&SPID3);
-    txbuf[0] = location;
-    spiSend(&SPID3,1,&txbuf);
-    spiReceive(&SPID3,3,&rxbuf);
-    spiUnselect(&SPID3);
-    spiStop(&SPID3);
-    palSetPad(GPIOC,cp);
+  //    palClearPad(GPIOB,SPISELECT);
+    spiStart(&SPID2,&std_spicfg3);
+    spiSelect(&SPID2);
+    txbuf[0] = location | 0x80;
+    spiSend(&SPID2,1,&txbuf);
+    spiReceive(&SPID2,1,&rxbuf);
+    spiUnselect(&SPID2);
+    spiStop(&SPID2);
+    //   palSetPad(GPIOB,SPISELECT);
+    return rxbuf[0];
 }
 
 
@@ -165,7 +157,7 @@ void init_spi()
   //  palSetPadMode(GPIOB, RST, PAL_MODE_OUTPUT_PUSHPULL);
   //palSetPadMode(GPIOB, DC, PAL_MODE_OUTPUT_PUSHPULL);
   palSetPadMode(GPIOB, SPISELECT, PAL_MODE_OUTPUT_PUSHPULL);
-  palClearPad(GPIOB,SPISELECT);
+  palSetPad(GPIOB,SPISELECT);
   //palSetPad(GPIOB,RST);
 
 }
@@ -539,7 +531,7 @@ int main(void) {
 
 
   
-  palSetPadMode(GPIOB, 11, PAL_MODE_OUTPUT_PUSHPULL);                      // spi2
+  palSetPadMode(GPIOB, 11, PAL_MODE_OUTPUT_PUSHPULL);      // spi2
 
   palSetPadMode(GPIOB, 15, PAL_MODE_ALTERNATE(5)|PAL_STM32_OSPEED_HIGHEST);
   palSetPadMode(GPIOB, 14, PAL_MODE_ALTERNATE(5)|PAL_STM32_OSPEED_HIGHEST);
@@ -609,8 +601,9 @@ int main(void) {
 	  
 	  //chprintf(&SD1,"calibrated at 3.3 %d\r\n",*(uint16_t*)0x1FFFF7BA);
 	  //chprintf((BaseSequentialStream*)&SD1,"ADC4 %d %d %d %d %d\r\n",samples2[0],samples2[1],samples2[2],samples2[3],samples2[4]);
-	  chThdSleepMilliseconds(1000);	  
-	  //chprintf(&SD1,"I Feel Happy!! - %d\r\n",step);
+	  chThdSleepMilliseconds(1000);
+	  
+	  chprintf(&SD1,"I Feel Happy!! - %x\r\n",spi_read(0x50));
 	  
 
 	  
