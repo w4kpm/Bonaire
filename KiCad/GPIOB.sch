@@ -26,10 +26,10 @@ F 3 "" H 7050 5350 50  0000 C CNN
 	-1   0    0    1   
 $EndComp
 $Comp
-L power1:GND #PWR023
+L power1:GND #PWR021
 U 1 1 5B217BC1
 P 1350 5850
-F 0 "#PWR023" H 1350 5600 50  0001 C CNN
+F 0 "#PWR021" H 1350 5600 50  0001 C CNN
 F 1 "GND" H 1350 5700 50  0000 C CNN
 F 2 "" H 1350 5850 50  0001 C CNN
 F 3 "" H 1350 5850 50  0001 C CNN
@@ -37,20 +37,14 @@ F 3 "" H 1350 5850 50  0001 C CNN
 	0    -1   -1   0   
 $EndComp
 Wire Wire Line
-	1400 4650 3750 4650
-Wire Wire Line
-	1500 4850 3750 4850
-Wire Wire Line
 	1900 5050 3750 5050
-Wire Wire Line
-	1800 4750 3750 4750
-Text Label 2500 4750 0    60   ~ 12
+Text Label 3150 4750 0    60   ~ 12
 MISO
-Text Label 2100 4650 0    60   ~ 12
+Text Label 3350 4650 0    60   ~ 12
 MOSI
-Text Label 2100 4850 0    60   ~ 12
+Text Label 3500 4850 0    60   ~ 12
 SCK
-Text Label 2100 5050 0    60   ~ 12
+Text Label 3500 5050 0    60   ~ 12
 ~CS
 Text Label 3100 5450 0    60   ~ 0
 UART1_RX
@@ -78,10 +72,10 @@ Wire Wire Line
 Wire Wire Line
 	1550 5550 1200 5550
 $Comp
-L Connector_Generic:Conn_01x06 J8
+L Connector_Generic:Conn_01x06 J3
 U 1 1 5C826A70
 P 1000 5650
-F 0 "J8" H 920 5125 50  0000 C CNN
+F 0 "J3" H 920 5125 50  0000 C CNN
 F 1 "Conn_01x06" H 920 5216 50  0000 C CNN
 F 2 "Connector_PinSocket_2.54mm:PinSocket_1x06_P2.54mm_Vertical" H 1000 5650 50  0001 C CNN
 F 3 "~" H 1000 5650 50  0001 C CNN
@@ -98,4 +92,66 @@ NoConn ~ 3750 5850
 NoConn ~ 3750 5950
 NoConn ~ 3750 6050
 NoConn ~ 3750 6150
+$Comp
+L Connector_Generic:Conn_01x07 J2
+U 1 1 5D1B2218
+P 850 3950
+F 0 "J2" H 770 4467 50  0000 C CNN
+F 1 "Conn_01x07" H 770 4376 50  0000 C CNN
+F 2 "" H 850 3950 50  0001 C CNN
+F 3 "~" H 850 3950 50  0001 C CNN
+	1    850  3950
+	-1   0    0    -1  
+$EndComp
+Wire Wire Line
+	1900 5050 1900 3650
+Wire Wire Line
+	1900 3650 1050 3650
+Wire Wire Line
+	1050 3750 2400 3750
+Wire Wire Line
+	2400 3750 2400 4650
+Wire Wire Line
+	2400 4650 3750 4650
+Wire Wire Line
+	1050 3850 2250 3850
+Wire Wire Line
+	2250 3850 2250 4750
+Wire Wire Line
+	2250 4750 3750 4750
+Wire Wire Line
+	1050 3950 2050 3950
+Wire Wire Line
+	2050 3950 2050 4850
+Wire Wire Line
+	2050 4850 3750 4850
+$Comp
+L power:GND #PWR019
+U 1 1 5D1B2FE3
+P 1250 4050
+F 0 "#PWR019" H 1250 3800 50  0001 C CNN
+F 1 "GND" V 1255 3922 50  0000 R CNN
+F 2 "" H 1250 4050 50  0001 C CNN
+F 3 "" H 1250 4050 50  0001 C CNN
+	1    1250 4050
+	0    -1   -1   0   
+$EndComp
+$Comp
+L power:+3.3V #PWR020
+U 1 1 5D1B30B1
+P 1250 4250
+F 0 "#PWR020" H 1250 4100 50  0001 C CNN
+F 1 "+3.3V" V 1265 4378 50  0000 L CNN
+F 2 "" H 1250 4250 50  0001 C CNN
+F 3 "" H 1250 4250 50  0001 C CNN
+	1    1250 4250
+	0    1    1    0   
+$EndComp
+Wire Wire Line
+	1250 4050 1050 4050
+Wire Wire Line
+	1250 4250 1050 4250
+Text Notes 500  4300 0    60   ~ 0
+CS\nSDI\nSDO\nSCK\nGND\n3Vo\nVIN
+NoConn ~ 1050 4150
 $EndSCHEMATC

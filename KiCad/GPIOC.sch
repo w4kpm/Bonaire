@@ -28,47 +28,62 @@ $EndComp
 NoConn ~ 5900 1300
 NoConn ~ 5900 1400
 NoConn ~ 5900 1500
-NoConn ~ 5900 1900
 NoConn ~ 5900 2000
 NoConn ~ 5900 2300
-Text GLabel 3600 1600 0    60   Input ~ 0
-RTD_MOSI
-Text GLabel 4250 1700 0    60   Input ~ 0
-RTD_MISO
-Text GLabel 4800 1800 0    60   Input ~ 0
-RTD_SCK
+NoConn ~ 5900 2100
+NoConn ~ 5900 2200
+NoConn ~ 5900 2400
+NoConn ~ 5900 2500
+NoConn ~ 5900 2600
+NoConn ~ 5900 2700
+NoConn ~ 5900 2800
+$Comp
+L Connector_Generic:Conn_01x08 J4
+U 1 1 5D1B4B7E
+P 3850 1800
+F 0 "J4" H 3770 1175 50  0000 C CNN
+F 1 "Conn_01x08" H 3770 1266 50  0000 C CNN
+F 2 "" H 3850 1800 50  0001 C CNN
+F 3 "~" H 3850 1800 50  0001 C CNN
+	1    3850 1800
+	-1   0    0    1   
+$EndComp
+Text Notes 3350 2150 0    60   ~ 0
+NC\nNC\nRST\nTXD\nRXD\nSET\nGND\nVCC
+$Comp
+L power:+5V #PWR023
+U 1 1 5D1B4C53
+P 4200 2000
+F 0 "#PWR023" H 4200 1850 50  0001 C CNN
+F 1 "+5V" V 4215 2128 50  0000 L CNN
+F 2 "" H 4200 2000 50  0001 C CNN
+F 3 "" H 4200 2000 50  0001 C CNN
+	1    4200 2000
+	0    1    1    0   
+$EndComp
+$Comp
+L power:GND #PWR022
+U 1 1 5D1B4CC4
+P 4150 2100
+F 0 "#PWR022" H 4150 1850 50  0001 C CNN
+F 1 "GND" V 4155 1972 50  0000 R CNN
+F 2 "" H 4150 2100 50  0001 C CNN
+F 3 "" H 4150 2100 50  0001 C CNN
+	1    4150 2100
+	0    -1   -1   0   
+$EndComp
+NoConn ~ 4050 1400
+NoConn ~ 4050 1500
 Wire Wire Line
-	5900 1600 3600 1600
+	4050 1700 5900 1700
 Wire Wire Line
-	5900 1700 4250 1700
+	4050 1800 5900 1800
 Wire Wire Line
-	5900 1800 4800 1800
-Text GLabel 3750 2400 0    60   Input ~ 0
-~RTDcs5
-Text GLabel 4200 2500 0    60   Input ~ 0
-~RTDcs4
-Text GLabel 5200 2700 0    60   Input ~ 0
-~RTDcs2
-Text GLabel 4650 2600 0    60   Input ~ 0
-~RTDcs3
-Text GLabel 5700 2800 0    60   Input ~ 0
-~RTDcs1
+	4050 1600 5900 1600
 Wire Wire Line
-	5900 2400 3750 2400
+	5900 1900 4050 1900
 Wire Wire Line
-	5900 2500 4200 2500
+	4200 2000 4050 2000
 Wire Wire Line
-	5900 2600 4650 2600
-Wire Wire Line
-	5900 2700 5200 2700
-Wire Wire Line
-	5900 2800 5700 2800
-Text GLabel 4300 2200 0    60   Input ~ 0
-Rain
-Text GLabel 4600 2100 0    60   Input ~ 0
-Aux
-Wire Wire Line
-	5900 2200 4300 2200
-Wire Wire Line
-	5900 2100 4600 2100
+	4150 2100 4050 2100
 $EndSCHEMATC
