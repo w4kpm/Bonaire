@@ -86,7 +86,7 @@ U 1 1 5C8291D1
 P 8800 1250
 F 0 "J1" H 8880 1242 50  0000 L CNN
 F 1 "Conn_01x04" H 8880 1151 50  0000 L CNN
-F 2 "CH20M:CH20Mt" H 8800 1250 50  0001 C CNN
+F 2 "Connector_PinSocket_2.54mm:PinSocket_1x04_P2.54mm_Vertical" H 8800 1250 50  0001 C CNN
 F 3 "~" H 8800 1250 50  0001 C CNN
 	1    8800 1250
 	1    0    0    -1  
@@ -127,4 +127,48 @@ Wire Wire Line
 	7700 1350 8600 1350
 Text Notes 9050 1450 0    60   ~ 0
 WHITE\nBLUE\nBROWN\nBLACK
+$Comp
+L Mechanical:MountingHole H2
+U 1 1 5D1BC02C
+P 6900 2900
+F 0 "H2" H 7000 2946 50  0000 L CNN
+F 1 "MountingHole" H 7000 2855 50  0000 L CNN
+F 2 "MountingHole:MountingHole_2.7mm_M2.5" H 6900 2900 50  0001 C CNN
+F 3 "~" H 6900 2900 50  0001 C CNN
+	1    6900 2900
+	1    0    0    -1  
+$EndComp
+$Comp
+L Mechanical:MountingHole H3
+U 1 1 5D1BC084
+P 6900 3350
+F 0 "H3" H 7000 3396 50  0000 L CNN
+F 1 "MountingHole" H 7000 3305 50  0000 L CNN
+F 2 "MountingHole:MountingHole_2.7mm_M2.5" H 6900 3350 50  0001 C CNN
+F 3 "~" H 6900 3350 50  0001 C CNN
+	1    6900 3350
+	1    0    0    -1  
+$EndComp
+$Comp
+L Mechanical:MountingHole H4
+U 1 1 5D1BC0E1
+P 6900 3850
+F 0 "H4" H 7000 3896 50  0000 L CNN
+F 1 "MountingHole" H 7000 3805 50  0000 L CNN
+F 2 "MountingHole:MountingHole_2.7mm_M2.5" H 6900 3850 50  0001 C CNN
+F 3 "~" H 6900 3850 50  0001 C CNN
+	1    6900 3850
+	1    0    0    -1  
+$EndComp
+$Comp
+L Mechanical:MountingHole H1
+U 1 1 5D1BC161
+P 6850 4300
+F 0 "H1" H 6950 4346 50  0000 L CNN
+F 1 "MountingHole" H 6950 4255 50  0000 L CNN
+F 2 "MountingHole:MountingHole_2.7mm_M2.5" H 6850 4300 50  0001 C CNN
+F 3 "~" H 6850 4300 50  0001 C CNN
+	1    6850 4300
+	1    0    0    -1  
+$EndComp
 $EndSCHEMATC
