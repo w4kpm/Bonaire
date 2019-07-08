@@ -198,6 +198,9 @@ static  int16_t deg,speed =0;
 static char rx_text[32][64];
 static int rx_queue_pos=0;
 static int rx_queue_num=0;
+static int8_t heatValue;
+static uint8_t heatRange;
+static double par_g1,par_g2,par_g3;
 static SerialConfig uartCfg =
 {
     115200,// bit rate
@@ -581,6 +584,7 @@ int main(void) {
   float VDD;
   float outsideTemp;
   float internalTemp;
+  
 
   //Default OPAMP4 CSR 10880000
   
@@ -602,10 +606,17 @@ int main(void) {
 	  //chprintf(&SD1,"calibrated at 3.3 %d\r\n",*(uint16_t*)0x1FFFF7BA);
 	  //chprintf((BaseSequentialStream*)&SD1,"ADC4 %d %d %d %d %d\r\n",samples2[0],samples2[1],samples2[2],samples2[3],samples2[4]);
 	  chThdSleepMilliseconds(1000);
-	  
+	  heatValue = 
+	  chprintf(&SD1,"PageValue!! - %x\r\n",spi_read(0x73));
+	  heatRange = (spi_read(0x02)&0x30)>>4;
+	  chprintf(&SD1,"Heat Range %x\r\n",heatRange);
+	  heatValue = (int8_t)spi_read(0x00);
+	  chprintf(&SD1,"Heat Value %d\r\n",heatValue);
+ 
 	  chprintf(&SD1,"I Feel Happy!! - %x\r\n",spi_read(0x50));
+	  spi_write(0x73,0x10);
+	  chprintf(&SD1,"PageValue!! - %x\r\n",spi_read(0x73));
 	  
-
 	  
        }
 
