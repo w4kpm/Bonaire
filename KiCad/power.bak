@@ -477,12 +477,12 @@ $EndComp
 Wire Wire Line
 	5000 4650 5300 4650
 $Comp
-L Device:Jumper JP?
+L Device:Jumper JP1
 U 1 1 5D1BE465
 P 6150 4150
-F 0 "JP?" H 6150 4414 50  0000 C CNN
+F 0 "JP1" H 6150 4414 50  0000 C CNN
 F 1 "Jumper" H 6150 4323 50  0000 C CNN
-F 2 "" H 6150 4150 50  0001 C CNN
+F 2 "Connector_PinSocket_2.54mm:PinSocket_1x02_P2.54mm_Vertical" H 6150 4150 50  0001 C CNN
 F 3 "~" H 6150 4150 50  0001 C CNN
 	1    6150 4150
 	1    0    0    -1  
