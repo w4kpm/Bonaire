@@ -69,7 +69,7 @@ F 3 "" H 5400 2400 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 Wire Wire Line
-	6150 2400 6150 2950
+	6150 2400 6150 2500
 $Comp
 L power1:GND #PWR016
 U 1 1 5B218056
@@ -82,7 +82,7 @@ F 3 "" H 6150 2400 50  0001 C CNN
 	-1   0    0    1   
 $EndComp
 Wire Wire Line
-	5400 2400 5400 2950
+	5400 2400 5400 2500
 $Comp
 L device:C C11
 U 1 1 5B21809E
@@ -170,9 +170,9 @@ Wire Wire Line
 Wire Wire Line
 	6550 3300 6900 3300
 Wire Wire Line
-	7200 2600 8150 2600
+	7200 2600 7700 2600
 Wire Wire Line
-	7200 3300 8200 3300
+	7200 3300 7700 3300
 Connection ~ 7700 2600
 Connection ~ 7700 3300
 $Comp
@@ -213,9 +213,9 @@ RS485B(+)
 Text HLabel 9950 3150 2    60   Output Italic 0
 RS485A(-)
 Wire Wire Line
-	9050 2900 9950 2900
+	9050 2900 9350 2900
 Wire Wire Line
-	9050 3150 9950 3150
+	9050 3150 9350 3150
 Wire Wire Line
 	8350 2600 9350 2600
 Wire Wire Line
@@ -238,8 +238,22 @@ F 3 "" H 8550 3000 50  0001 C CNN
 	0    1    1    0   
 $EndComp
 Wire Wire Line
-	8750 2900 8750 3150
+	8750 2900 8750 3000
 Wire Wire Line
 	8550 3000 8750 3000
 Connection ~ 8750 3000
+Wire Wire Line
+	5400 2500 5400 2950
+Wire Wire Line
+	6150 2500 6150 2950
+Wire Wire Line
+	7700 2600 8150 2600
+Wire Wire Line
+	7700 3300 8200 3300
+Wire Wire Line
+	9350 2900 9950 2900
+Wire Wire Line
+	9350 3150 9950 3150
+Wire Wire Line
+	8750 3000 8750 3150
 $EndSCHEMATC

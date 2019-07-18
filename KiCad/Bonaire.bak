@@ -171,4 +171,6 @@ F 3 "~" H 6850 4300 50  0001 C CNN
 	1    6850 4300
 	1    0    0    -1  
 $EndComp
+Text Notes 4950 1250 0    60   ~ 0
+NB!! - The internal RS485 chip has A and B mislabled!!\nto all the rest of our equipmnet they are turned around\n
 $EndSCHEMATC
