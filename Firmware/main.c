@@ -32,10 +32,13 @@
 #include "hal_queues.h"
 #include <string.h>
 #include "stm32f3xx.h"
-#include "font.h"
-#include "fontbig.h"
-static uint8_t txbuf[2];
-static uint8_t rxbuf[3];
+//#include "font.h"
+//#include "fontbig.h"
+#include "bme680.h"
+
+
+static uint8_t txbuf[32];
+static uint8_t rxbuf[32];
 static uint8_t my_address;
 static uint8_t save_address;
 static uint8_t baud_rate;
@@ -81,7 +84,7 @@ size_t nx = 0, ny = 0;
 #define MOSI 15
 #define DC 14
 
-
+struct bme680_dev gas_sensor;
 
 
 
@@ -175,7 +178,7 @@ void init_spi()
 
 static const WDGConfig wdgcfg = {
   STM32_IWDG_PR_64,
-  STM32_IWDG_RL(1000),
+  STM32_IWDG_RL(2000),
   STM32_IWDG_WIN_DISABLED};
 
 // This got redefined in a later version of Chibios for this board
@@ -195,12 +198,15 @@ static char current_key;
 static  uint16_t step =0;
 static  int16_t deg,speed =0;
 
-static char rx_text[32][64];
+static char rx_text[32][48];
+static char rx_text2[32][48];
+static char rx_text3[32][48];
 static int rx_queue_pos=0;
 static int rx_queue_num=0;
 static int8_t heatValue;
+static uint8_t res_heat_x;
 static uint8_t heatRange;
-static double par_g1,par_g2,par_g3;
+static double par_g1,par_g2,par_g3,var1,var2,var3,var4,var5,target_temp,amb_temp,res_heat_range,res_heat_val;
 static SerialConfig uartCfg =
 {
     115200,// bit rate
@@ -320,8 +326,15 @@ static THD_FUNCTION(Thread3, arg) {
 
 	  if ((b!= Q_TIMEOUT) && (rx_queue_pos < 63))
 	      {
-		//chprintf((BaseSequentialStream*)&SD1,"got char: %x\r\n",b);
+		palSetPad(GPIOA,1);
+		  chprintf((BaseSequentialStream*)&SD2,"got char: %x\r\n",b);
+		  chprintf((BaseSequentialStream*)&SD1,"got char: %x\r\n",b);
 		  rx_text[rx_queue_num][rx_queue_pos++]=b;
+		  chThdSleepMilliseconds(100);
+		  palClearPad(GPIOA,1);
+		
+
+		
 	      }
 	  if ((b == Q_TIMEOUT) && (rx_queue_pos > 0))
 	      {
@@ -427,7 +440,7 @@ static THD_FUNCTION(Thread4, arg) {
 	    p_5_0_um = buildint(lcltext,24);
 	    p_10_0_um = buildint(lcltext,26);
 
-	    chprintf(&SD1,"pm1_0_atm = %d,",pm1_0_atm);
+	    chprintf(&SD1,"A: pm1_0_atm = %d,",pm1_0_atm);
 	    chprintf(&SD1,"pm2_5_atm = %d,",pm2_5_atm);
 	    chprintf(&SD1,"pm10_0_atm = %d,",pm10_0_atm);
 	    chprintf(&SD1,"pm1_0_cf_1 = %d,",pm1_0_cf_1);
@@ -464,6 +477,8 @@ static THD_FUNCTION(Thread5, arg) {
 
 
 
+uint8_t set_required_settings;
+
 
 
 void adcSTM32EnableTSVREFE(void) {
@@ -475,6 +490,7 @@ void adcSTM32EnableTSVREFE(void) {
 
 
 void feedWatchdog(){
+  return;
     if (!reset)
 	wdgReset(&WDGD1);
 }
@@ -487,6 +503,97 @@ void restart_modbus(){
     else
 	sdStart(&SD2, &uartCfg2);
 }
+
+
+
+void user_delay_ms(uint32_t period)
+{
+
+  feedWatchdog();
+  chThdSleepMilliseconds(period);
+  
+}
+
+
+int8_t user_spi_read(uint8_t dev_id, uint8_t reg_addr, uint8_t *reg_data, uint16_t len)
+{
+    int8_t rslt = 0; /* Return 0 for Success, non-zero for failure */
+
+    /*
+     * The parameter dev_id can be used as a variable to select which Chip Select pin has
+     * to be set low to activate the relevant device on the SPI bus
+     */
+    //chprintf((BaseSequentialStream*)&SD1,"User read %X, %d\r\n",reg_addr,len);
+    user_delay_ms(100);
+    spiStart(&SPID2,&std_spicfg3);
+    spiSelect(&SPID2);
+    txbuf[0] = reg_addr;
+    spiSend(&SPID2,1,&txbuf);
+    spiReceive(&SPID2,len,reg_data);
+    spiUnselect(&SPID2);
+    spiStop(&SPID2);
+
+    //chprintf((BaseSequentialStream*)&SD1,"DID User read %X, %X %X %X \r\n",reg_data[0],reg_data[1],reg_data[2],reg_data[3]);
+    user_delay_ms(100);
+
+    
+    /*
+     * Data on the bus should be like
+     * |----------------+---------------------+-------------|
+     * | MOSI           | MISO                | Chip Select |
+     * |----------------+---------------------|-------------|
+     * | (don't care)   | (don't care)        | HIGH        |
+     * | (reg_addr)     | (don't care)        | LOW         |
+     * | (don't care)   | (reg_data[0])       | LOW         |
+     * | (....)         | (....)              | LOW         |
+     * | (don't care)   | (reg_data[len - 1]) | LOW         |
+     * | (don't care)   | (don't care)        | HIGH        |
+     * |----------------+---------------------|-------------|
+     */
+
+    return rslt;
+}
+
+int8_t user_spi_write(uint8_t dev_id, uint8_t reg_addr, uint8_t *reg_data, uint16_t len)
+{
+    int8_t rslt = 0; /* Return 0 for Success, non-zero for failure */
+
+    /*
+     * The parameter dev_id can be used as a variable to select which Chip Select pin has
+     * to be set low to activate the relevant device on the SPI bus
+     */
+    //chprintf((BaseSequentialStream*)&SD1,"User write %X, %d\r\n",reg_addr,len);
+    user_delay_ms(100);
+    spiStart(&SPID2,&std_spicfg3);
+    spiSelect(&SPID2);
+    txbuf[0] = reg_addr;
+    memcpy(txbuf+1,reg_data,len);
+      //txbuf[1] = data;
+    spiSend(&SPID2,len+1,&txbuf);
+    spiUnselect(&SPID2);
+    spiStop(&SPID2);
+
+
+    
+    /*
+     * Data on the bus should be like
+     * |---------------------+--------------+-------------|
+     * | MOSI                | MISO         | Chip Select |
+     * |---------------------+--------------|-------------|
+     * | (don't care)        | (don't care) | HIGH        |
+     * | (reg_addr)          | (don't care) | LOW         |
+     * | (reg_data[0])       | (don't care) | LOW         |
+     * | (....)              | (....)       | LOW         |
+     * | (reg_data[len - 1]) | (don't care) | LOW         |
+     * | (don't care)        | (don't care) | HIGH        |
+     * |---------------------+--------------|-------------|
+     */
+
+    return rslt;
+}
+
+
+   struct bme680_field_data data;
 
 int main(void) {
   unsigned i;
@@ -504,8 +611,8 @@ int main(void) {
 
   
   palSetPad(GPIOB, 5);
-  wdgStart(&WDGD1, &wdgcfg);
-  wdgReset(&WDGD1);
+  //wdgStart(&WDGD1, &wdgcfg);
+  //wdgReset(&WDGD1);
   chMBObjectInit(&RxMbx,&RxMbxBuff,MAILBOX_SIZE);
   chMBObjectInit(&RxMbx2,&RxMbxBuff2,MAILBOX_SIZE);
   adcStart(&ADCD1, NULL);
@@ -528,10 +635,12 @@ int main(void) {
   
   palSetPadMode(GPIOB, 6, PAL_MODE_ALTERNATE(7));  //USART1 - console  
   palSetPadMode(GPIOB, 7, PAL_MODE_ALTERNATE(7));
+  palSetPadMode(GPIOA, 1, PAL_MODE_OUTPUT_PUSHPULL); // tx/rx
+  palSetPadMode(GPIOA, 2, PAL_MODE_ALTERNATE(7));  //USART2 - MODBUS
+  palSetPadMode(GPIOA, 3, PAL_MODE_ALTERNATE(7));
 
-  palSetPadMode(GPIOB, 4, PAL_MODE_ALTERNATE(7));  //USART2 - particle sensor
-  palSetPadMode(GPIOB, 3, PAL_MODE_ALTERNATE(7));
-
+  palSetPadMode(GPIOD, 8, PAL_MODE_ALTERNATE(7));  //USART3 - particle sensor
+  palSetPadMode(GPIOD, 9, PAL_MODE_ALTERNATE(7));
 
   
   palSetPadMode(GPIOB, 11, PAL_MODE_OUTPUT_PUSHPULL);      // spi2
@@ -543,6 +652,7 @@ int main(void) {
 
   
   sdStart(&SD1,&uartCfg);
+  sdStart(&SD3,&uartCfg2);
 
   
 
@@ -554,7 +664,8 @@ int main(void) {
 
   restart_modbus();
   chprintf((BaseSequentialStream*)&SD1,"Hello World - I am # %d,%d\r\n",my_address,baud_rate);
-
+  palSetPad(GPIOA, 1);     // Recieve Enable RS485
+  chprintf((BaseSequentialStream*)&SD2,"modbuschannel\r\n");
 
   init_spi();
   chprintf((BaseSequentialStream*)&SD1,"SPI init\r\n");
@@ -588,7 +699,33 @@ int main(void) {
 
   //Default OPAMP4 CSR 10880000
   
+  gas_sensor.dev_id = 0;
+  gas_sensor.intf = BME680_SPI_INTF;
+  gas_sensor.read = user_spi_read;
+  gas_sensor.write = user_spi_write;
+  gas_sensor.delay_ms = user_delay_ms;
+  gas_sensor.amb_temp = 25;
+  int8_t rslt = BME680_OK;
 
+rslt = bme680_init(&gas_sensor);
+
+    gas_sensor.tph_sett.os_hum = BME680_OS_2X;
+    gas_sensor.tph_sett.os_pres = BME680_OS_4X;
+    gas_sensor.tph_sett.os_temp = BME680_OS_8X;
+    gas_sensor.tph_sett.filter = BME680_FILTER_SIZE_3;
+
+    /* Set the remaining gas sensor settings and link the heating profile */
+    gas_sensor.gas_sett.run_gas = BME680_ENABLE_GAS_MEAS;
+    /* Create a ramp heat waveform in 3 steps */
+    gas_sensor.gas_sett.heatr_temp = 320; /* degree Celsius */
+    gas_sensor.gas_sett.heatr_dur = 150; /* milliseconds */
+
+    /* Select the power mode */
+    /* Must be set before writing the sensor configuration */
+
+
+  
+  
 
 
 
@@ -606,18 +743,26 @@ int main(void) {
 	  //chprintf(&SD1,"calibrated at 3.3 %d\r\n",*(uint16_t*)0x1FFFF7BA);
 	  //chprintf((BaseSequentialStream*)&SD1,"ADC4 %d %d %d %d %d\r\n",samples2[0],samples2[1],samples2[2],samples2[3],samples2[4]);
 	  chThdSleepMilliseconds(1000);
-	  heatValue = 
-	  chprintf(&SD1,"PageValue!! - %x\r\n",spi_read(0x73));
-	  heatRange = (spi_read(0x02)&0x30)>>4;
-	  chprintf(&SD1,"Heat Range %x\r\n",heatRange);
-	  heatValue = (int8_t)spi_read(0x00);
-	  chprintf(&SD1,"Heat Value %d\r\n",heatValue);
- 
-	  chprintf(&SD1,"I Feel Happy!! - %x\r\n",spi_read(0x50));
-	  spi_write(0x73,0x10);
-	  chprintf(&SD1,"PageValue!! - %x\r\n",spi_read(0x73));
+    gas_sensor.power_mode = BME680_FORCED_MODE; 
+
+    /* Set the required sensor settings needed */
+    set_required_settings = BME680_OST_SEL | BME680_OSP_SEL | BME680_OSH_SEL | BME680_FILTER_SEL 
+        | BME680_GAS_SENSOR_SEL;
+
+	  /* Set the desired sensor configuration */
+    rslt = bme680_set_sensor_settings(set_required_settings,&gas_sensor);
+
+    /* Set the power mode */
+    rslt = bme680_set_sensor_mode(&gas_sensor);
 	  
-	  
+	  rslt = bme680_get_sensor_data(&data, &gas_sensor);
+	  chprintf(&SD1,"T: %.2f degC, P: %.2f hPa, H %.2f %%rH ", data.temperature / 100.0f,
+            data.pressure / 100.0f, data.humidity / 1000.0f );
+        /* Avoid using measurements from an unstable heating setup */
+        if(data.status & BME680_GASM_VALID_MSK)
+	  chprintf(&SD1,", G: %d ohms", data.gas_resistance);
+	chprintf(&SD1,"\r\n");
+	
        }
 
   return 0;

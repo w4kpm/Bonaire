@@ -115,6 +115,7 @@ CSRC = $(ALLCSRC) \
        $(CHIBIOS)/os/various/syscalls.c \
        $(CHIBIOS)/os/hal/lib/streams/memstreams.c \
        $(CHIBIOS)/os/hal/lib/streams/chprintf.c \
+       bme680.c \
        main.c
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global
