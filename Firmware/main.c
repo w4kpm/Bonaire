@@ -48,8 +48,8 @@ static uint8_t reset =0;
 static char text[255];
 static char metrics[9][12];
 
-static uint8_t vbuf2[32][128];
-static uint8_t vbuf[32][128];
+static uint8_t vbuf2[32][33];
+static uint8_t vbuf[32][33];
 static uint8_t rainHistory[10] = {0};
 static float rainRate,lifetimeRain = 0.0;
 static  float irradiance;
@@ -321,16 +321,16 @@ static THD_FUNCTION(Thread3, arg) {
   while(TRUE)
       {
 	  
-	  b = sdGetTimeout(&SD2,TIME_MS2I(2));
+	  b = sdGetTimeout(&SD3,TIME_MS2I(5));
 
 
-	  if ((b!= Q_TIMEOUT) && (rx_queue_pos < 63))
+	  if ((b!= Q_TIMEOUT) && (rx_queue_pos < 32))
 	      {
 		palSetPad(GPIOA,1);
-		  chprintf((BaseSequentialStream*)&SD2,"got char: %x\r\n",b);
-		  chprintf((BaseSequentialStream*)&SD1,"got char: %x\r\n",b);
+		//chprintf((BaseSequentialStream*)&SD2,"got char: %x\r\n",b);
+		//chprintf((BaseSequentialStream*)&SD1,"got char: %x\r\n",b);
 		  rx_text[rx_queue_num][rx_queue_pos++]=b;
-		  chThdSleepMilliseconds(100);
+		  //chThdSleepMilliseconds(100);
 		  palClearPad(GPIOA,1);
 		
 
@@ -420,10 +420,11 @@ static THD_FUNCTION(Thread4, arg) {
 	    value = 0;
 	    for (x=0;x<rxPos;x++)
 	      {
-		//chprintf((BaseSequentialStream*)&SD1,"%x ",lcltext[x]);
+		chprintf((BaseSequentialStream*)&SD1,"%x ",lcltext[x]);
 		if (x<30)
 		  value = value + lcltext[x];
 	      }
+	    chprintf((BaseSequentialStream*)&SD1,"checksum %x  %x \r\n",value,buildint(lcltext,30));
 	    if (buildint(lcltext,30) != value)
 	      continue;
 
@@ -665,7 +666,7 @@ int main(void) {
   restart_modbus();
   chprintf((BaseSequentialStream*)&SD1,"Hello World - I am # %d,%d\r\n",my_address,baud_rate);
   palSetPad(GPIOA, 1);     // Recieve Enable RS485
-  chprintf((BaseSequentialStream*)&SD2,"modbuschannel\r\n");
+  //chprintf((BaseSequentialStream*)&SD2,"modbuschannel\r\n");
 
   init_spi();
   chprintf((BaseSequentialStream*)&SD1,"SPI init\r\n");
