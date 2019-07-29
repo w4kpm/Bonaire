@@ -50,22 +50,42 @@ static char metrics[9][12];
 
 static uint8_t vbuf2[32][33];
 static uint8_t vbuf[32][33];
-static uint8_t rainHistory[10] = {0};
-static float rainRate,lifetimeRain = 0.0;
-static  float irradiance;
-static  float irradiance2;
-static  float irradiance3;
-static  int displaymetric;
-static  float pt100temp1,pt100temp2,pt100temp3,pt100temp4,pt100temp5;
-static  float amps,windspeed,windspeedout,opamp4,snow,snowoutput,windamps,winddir;
-
-static uint8_t oled_current_row;
-static uint8_t oled_current_column;
 
 
 static uint16_t *flash1 = 0x803F000;
 static uint16_t *flash2 = 0x803e800;
 static uint16_t settings;
+
+
+static  uint16_t a_pm1_0_atm,
+  a_pm2_5_atm,
+  a_pm10_0_atm,
+  a_pm1_0_cf_1,
+  a_pm2_5_cf_1,
+  a_pm10_0_cf_1,
+  a_p_0_3_um,
+  a_p_0_5_um,
+  a_p_1_0_um,
+  a_p_2_5_um,
+  a_p_5_0_um,
+  a_p_10_0_um;
+
+
+static  uint16_t b_pm1_0_atm,
+  b_pm2_5_atm,
+  b_pm10_0_atm,
+  b_pm1_0_cf_1,
+  b_pm2_5_cf_1,
+  b_pm10_0_cf_1,
+  b_p_0_3_um,
+  b_p_0_5_um,
+  b_p_1_0_um,
+  b_p_2_5_um,
+  b_p_5_0_um,
+  b_p_10_0_um;
+
+static uint16_t humidity,pressure,voc,temp;
+
 
 #define ADC_GRP1_NUM_CHANNELS   2
 #define ADC_GRP2_NUM_CHANNELS   6
@@ -106,20 +126,69 @@ static const SPIConfig std_spicfg3 = {
 
 
 
-
-
-
-uint32_t checksum()
+void unlock_flash()
 {
-    uint32_t checksum;
-    int i;
-    int j;
-    checksum =0;
-    for (i=0;i<32;i++)
-	for(j=0;j<128;j++)
-	    checksum = checksum+vbuf[i][j];
-    return checksum;
+    if (FLASH->CR & FLASH_CR_LOCK){
+	FLASH->KEYR = 0x45670123;
+	FLASH->KEYR = 0xCDEF89AB;
+    }
+
+
 }
+
+
+void erase_flash(uint16_t *flash)
+{
+    int x;
+    unlock_flash();                        // must unlock flash before
+					   // any write operations
+
+    FLASH->CR |= FLASH_CR_PER;             // set page erase
+    
+    FLASH->AR = flash;                     // set page to flash
+    
+    FLASH->CR |= FLASH_CR_STRT;            // start erasing
+    
+    while ((FLASH->SR & FLASH_SR_BSY) == FLASH_SR_BSY); // loop till done
+							// watchdog should
+							// reset if it gets
+							// stuck
+
+    SET_BIT (FLASH->SR, (FLASH_SR_EOP));   // tech note RM0316 says to clear
+    CLEAR_BIT (FLASH->CR, (FLASH_CR_PER)); // found note online that you must
+                                           // clear this prior to writing
+    
+}
+
+
+void write_flash(uint16_t value,uint16_t* flash)
+{
+    int x;
+    erase_flash(flash);
+
+
+      
+    SET_BIT(FLASH->CR, (FLASH_CR_PG));     // we are already unlocked, trying
+					   // to do it again will mess
+					   // things up
+    
+    *flash = value;                        // actually write the value
+
+    
+    while ((FLASH->SR & FLASH_SR_BSY) == FLASH_SR_BSY); // loop till done
+							// watchdog should
+							// reset if it gets
+							// stuck
+    //  CLEAR_BIT (FLASH->CR, (FLASH_CR_PG));  // probably don't need to to this
+					   // again
+    
+    //SET_BIT (FLASH->SR, (FLASH_SR_EOP));   // tech note RM0316 says to clear
+    FLASH->CR |= FLASH_CR_LOCK;
+}
+
+
+
+
 
 
 
@@ -191,18 +260,18 @@ static const WDGConfig wdgcfg = {
 
 static mailbox_t RxMbx;
 static mailbox_t RxMbx2;
+static mailbox_t RxMbx3;
 #define MAILBOX_SIZE 25
 static msg_t RxMbxBuff[MAILBOX_SIZE];
 static msg_t RxMbxBuff2[MAILBOX_SIZE];
+static msg_t RxMbxBuff3[MAILBOX_SIZE];
 static char current_key;
 static  uint16_t step =0;
 static  int16_t deg,speed =0;
 
 static char rx_text[32][48];
-static char rx_text2[32][48];
-static char rx_text3[32][48];
-static int rx_queue_pos=0;
-static int rx_queue_num=0;
+static char rx_text2[8][48];
+static char rx_text3[8][48];
 static int8_t heatValue;
 static uint8_t res_heat_x;
 static uint8_t heatRange;
@@ -310,39 +379,35 @@ uint16_t wCRCWord = 0xFFFF;
 
 
 
-
+// Modbus Serial Capture
 static THD_WORKING_AREA(waThread3, 512);
 static THD_FUNCTION(Thread3, arg) {
   (void)arg;
   int pass = 0;
   msg_t b = 0;
+  int rx_queue_pos=0;
+  int rx_queue_num=0;
 
   chRegSetThreadName("serial");
   while(TRUE)
       {
 	  
-	  b = sdGetTimeout(&SD3,TIME_MS2I(5));
-
+	  b = sdGetTimeout(&SD2,TIME_MS2I(2));
 
 	  if ((b!= Q_TIMEOUT) && (rx_queue_pos < 32))
 	      {
-		palSetPad(GPIOA,1);
-		//chprintf((BaseSequentialStream*)&SD2,"got char: %x\r\n",b);
-		//chprintf((BaseSequentialStream*)&SD1,"got char: %x\r\n",b);
-		  rx_text[rx_queue_num][rx_queue_pos++]=b;
-		  //chThdSleepMilliseconds(100);
-		  palClearPad(GPIOA,1);
 		
-
+		  rx_text[rx_queue_num][rx_queue_pos++]=b;
+	       
 		
 	      }
 	  if ((b == Q_TIMEOUT) && (rx_queue_pos > 0))
 	      {
 
 		  rx_text[rx_queue_num][rx_queue_pos] = 0;
-
+		  chprintf((BaseSequentialStream*)&SD1,"sent One: %d,%d\r\n",rx_queue_num,rx_queue_pos);  
 		  chMBPostTimeout(&RxMbx,(rx_queue_num<<8)|rx_queue_pos,TIME_INFINITE); // let our mailbox know
-		  chMBPostTimeout(&RxMbx2,(rx_queue_num<<8)|rx_queue_pos,TIME_INFINITE); // let our mailbox know
+		  chMBPostTimeout(&RxMbx2,(rx_queue_num<<8),TIME_INFINITE); // let our mailbox know
 		  rx_queue_pos = 0;
 		  // we have a new entry
 		  rx_queue_num = (++rx_queue_num)%32;
@@ -354,6 +419,355 @@ static THD_FUNCTION(Thread3, arg) {
 
   return MSG_OK;
 }
+
+// Particulate Sensor 1 capture
+static THD_WORKING_AREA(waThread6, 512);
+static THD_FUNCTION(Thread6, arg) {
+  (void)arg;
+  int pass = 0;
+  msg_t b = 0;
+  int rx_queue_pos=0;
+  int rx_queue_num=0;
+
+  chRegSetThreadName("part1");
+  while(TRUE)
+      {
+	  
+	  b = sdGetTimeout(&SD3,TIME_MS2I(5));
+
+
+	  if ((b!= Q_TIMEOUT) && (rx_queue_pos < 32))
+	      {
+		
+		//chprintf((BaseSequentialStream*)&SD2,"got char: %x\r\n",b);
+
+		rx_text2[rx_queue_num][rx_queue_pos++]=b;
+		
+		
+		
+
+		
+	      }
+	  if ((b == Q_TIMEOUT) && (rx_queue_pos > 0))
+	      {
+
+		  rx_text2[rx_queue_num][rx_queue_pos] = 0;
+
+		  chMBPostTimeout(&RxMbx3,(rx_queue_num<<8),TIME_INFINITE); // let our mailbox know
+		  //chMBPostTimeout(&RxMbx2,(rx_queue_num<<8),TIME_INFINITE); // let our mailbox know
+		  rx_queue_pos = 0;
+		  // we have a new entry
+		  rx_queue_num = (++rx_queue_num)%8;
+		  memset(rx_text2[rx_queue_num],0,5);
+	      }
+	  
+  
+      }
+
+  return MSG_OK;
+}
+
+// Particulate Sensor 2 capture
+static THD_WORKING_AREA(waThread7, 512);
+static THD_FUNCTION(Thread7, arg) {
+  (void)arg;
+  int pass = 0;
+  msg_t b = 0;
+  int rx_queue_pos=0;
+  int rx_queue_num=0;
+
+  chRegSetThreadName("part2");
+  while(TRUE)
+      {
+	  
+	  b = sdGetTimeout(&SD4,TIME_MS2I(5));
+
+
+	  if ((b!= Q_TIMEOUT) && (rx_queue_pos < 32))
+	      {
+
+		  rx_text3[rx_queue_num][rx_queue_pos++]=b;		
+	      }
+	  if ((b == Q_TIMEOUT) && (rx_queue_pos > 0))
+	      {
+
+		  rx_text3[rx_queue_num][rx_queue_pos] = 0;
+		  chMBPostTimeout(&RxMbx3,(rx_queue_num<<8)|0x1,TIME_INFINITE); // let our mailbox know
+		  rx_queue_pos = 0;
+		  // we have a new entry
+		  rx_queue_num = (++rx_queue_num)%8;
+		  memset(rx_text3[rx_queue_num],0,5);
+	      }
+	  
+  
+      }
+
+  return MSG_OK;
+}
+
+
+
+static THD_WORKING_AREA(waThread1, 2048);
+static THD_FUNCTION(Thread1, arg) {
+    int charnum;
+    int index;
+    msg_t key;
+    int x;
+    char *starttxt;
+    char text[255];
+    char lcltext[32];
+    uint8_t command;
+    int row;
+    int col;
+    int len;
+    uint16_t error;
+    uint16_t code;
+    msg_t rxRow;
+    msg_t rxPos;
+    msg_t response;
+    uint8_t skip_next;
+    uint16_t reg;
+    int16_t value;
+    while (TRUE)
+	{
+	    error = 0;
+	    // the skip is because the way I have it hooked up right now
+	    // causes it to read whatever we send.
+	    chMBFetchTimeout(&RxMbx,&rxRow,TIME_INFINITE);
+	    rxPos = rxRow & 0xFF;
+	    rxRow = rxRow >> 8;
+	    memcpy(lcltext,rx_text[rxRow],rxPos);
+	    // if the message is for us and the CRC matches - otherwise -
+	    // ignore.
+	    chprintf(&SD1,"got One # %d,%d\r\n",rxRow,rxPos);
+            if ((lcltext[0] == my_address) &&
+		(*(uint16_t*)(lcltext+rxPos-2) == CRC16(lcltext,rxPos-2))){
+		    
+		command = lcltext[1];		
+		palSetPad(GPIOA,1);
+		palSetPad(GPIOE,0);
+		//chprintf((BaseSequentialStream*)&SD1,"+");
+		if (command == 6){
+		    reg = (lcltext[2]<<8)|lcltext[3];
+		    switch (reg){
+		    case 1000:
+			save_address = (lcltext[4]<<8)|lcltext[5];
+			chprintf(&SD1,"Hello World - I am now # %d\r\n",save_address);
+		     
+			break;
+		    case 1001:
+			// 1 for 19200 anything else is 9600
+			// throw error if not 0 or 1
+			save_baud_rate = (lcltext[4]<<8)|lcltext[5];
+			chprintf(&SD1,"Hello World - baud_rate # %d\r\n",save_baud_rate);
+			break;
+		    case 1234:
+			// 1 for 19200 anything else is 9600
+			// throw error if not 0 or 1
+		      settings = ((save_baud_rate&0xff)<<8)|(save_address&0xff);
+		      chprintf(&SD1,"Write Flash %d,%d,%x\r\n",save_address,save_baud_rate,settings);			
+			code =  (lcltext[4]<<8)|lcltext[5];
+			if (code==0x1234){
+			  //write_flash(((save_baud_rate&0xff)<<8)|(save_address&0xff),flash1);
+			  write_flash(settings,flash1);
+			    chprintf(&SD1,"WroteFlash %x\r\n",*flash1);			
+			    reset = 1;
+			}
+			else
+			    error = 0x04;
+			    
+			break;
+
+		    default:
+			error = 0x02;
+		    }
+		    if (error==0){
+			// for this command we just repeat the same thing
+			//back to them
+			sdWrite(&SD2,lcltext,8);
+		    }
+		    else{
+			lcltext[0] = my_address;
+			lcltext[1] = 0x86;
+			lcltext[2] = error;
+			*(uint16_t*)(lcltext+3) = CRC16(lcltext,3);
+			lcltext[5] = 0;
+			sdWrite(&SD2,lcltext,5);
+		    }
+
+			
+			
+	
+		}
+		else if (command == 4)
+		    {
+			reg = (lcltext[2]<<8)|lcltext[3];
+
+			switch (reg) {
+			case 1:
+			    value = pressure;
+			    break;
+			case 2:
+			    value = humidity;
+			    break;
+			case 3:
+			  value = a_pm1_0_atm;
+			  break;
+			  
+			case 4:
+			  value = a_pm2_5_atm;
+			  break;
+			  
+			case 5:
+			  value = a_pm10_0_atm;
+			  break;
+			  
+			case 6:
+			  value = a_pm1_0_cf_1;
+			  break;
+			  
+			case 7:
+			  value = a_pm2_5_cf_1;
+			  break;
+			  
+			case 8:
+			  value = a_pm10_0_cf_1;
+			  break;
+			  
+			case 9:
+			  value = a_p_0_3_um;
+			  break;
+			  
+			case 10:
+			  value = a_p_0_5_um;
+			  break;
+			  
+			case 11:
+			  value = a_p_1_0_um;
+			  break;
+			  
+			case 12:
+			  value = a_p_2_5_um;
+			  break;
+			  
+			case 13:
+			  value = a_p_5_0_um;
+			  break;
+			  
+			case 14:
+			  value = a_p_10_0_um;
+			  break;
+			  
+			case 15:
+			  value = b_pm1_0_atm;
+			  break;
+			  
+			case 16:
+			  value = b_pm2_5_atm;
+			  break;
+			  
+			case 17:
+			  value = b_pm10_0_atm;
+			  break;
+			  
+			case 18:
+			  value = b_pm1_0_cf_1;
+			  break;
+			  
+			case 19:
+			  value = b_pm2_5_cf_1;
+			  break;
+			  
+			case 20:
+			  value = b_pm10_0_cf_1;
+			  break;
+			  
+			case 21:
+			  value = b_p_0_3_um;
+			  break;
+			  
+			case 22:
+			  value = b_p_0_5_um;
+			  break;
+			  
+			case 23:
+			  value = b_p_1_0_um;
+			  break;
+			  
+			case 24:
+			  value = b_p_2_5_um;
+			  break;
+			  
+			case 25:
+			  value = b_p_5_0_um;
+			  break;
+			  
+			case 26:
+			  value = b_p_10_0_um;
+			  break;			    
+			case 27:
+			    value = voc;
+			    break;
+			case 28:
+			    value = temp;
+			    break;
+			  
+			default:
+			    error = 0x02;
+			    value = step;
+			}
+			if (error==0){
+			    lcltext[0] = my_address;
+			    lcltext[1] = 4;
+			    lcltext[2] = 2;
+			    lcltext[3] = (value & 0xFF00 ) >> 8;
+			    lcltext[4] = value & 0xFF ;
+			    *(uint16_t*)(lcltext+5) = CRC16(lcltext,5);
+			    lcltext[7] = 0;
+			    sdWrite(&SD2,lcltext,7);
+			}
+			else{
+			    lcltext[0] = my_address;
+			    lcltext[1] = 0x84;
+			    lcltext[2] = 0x02;
+			    *(uint16_t*)(lcltext+3) = CRC16(lcltext,3);
+			    lcltext[5] = 0;
+			    sdWrite(&SD2,lcltext,5);
+			}
+
+				
+		    }
+		else
+		    sdWrite(&SD2,lcltext,rxPos);
+		//chprintf((BaseSequentialStream*)&SD1,"Queue not empty %X %x %x\r\n",SD3.oqueue.q_counter,SD3.oqueue.q_rdptr,SD3.oqueue.q_wrptr);
+		//chprintf((BaseSequentialStream*)&SD1,"command %d - register %d, %d\r\n",lcltext[1],reg,value);
+		// I've been having problems with this - setting it too
+		// short causes truncated communications back to the
+		// PLC - I should really find a way to trigger it once the
+		// call co sdWrite is done.chOQIsEmptyI
+
+		while (!(oqIsEmptyI(&(&SD2)->oqueue)))
+		    {
+			//chprintf((BaseSequentialStream*)&SD1,".");
+		    	chThdSleepMilliseconds(1);
+		    }
+
+		chThdSleepMilliseconds(2);
+		palClearPad(GPIOA,1);
+		palClearPad(GPIOE,0);
+		//chThdSleepMilliseconds(1);
+		//chprintf((BaseSequentialStream*)&SD1,"-");
+		//hprintf(&SD1,lcltext);
+		//skip_next = 0;
+	    }
+
+	}
+
+}
+
+
+
+
 
 uint8_t decode_pos(char pos)
 {
@@ -386,18 +800,6 @@ static THD_FUNCTION(Thread4, arg) {
     uint16_t reg;
     int16_t value;
 
-    uint16_t pm1_0_atm,
-      pm2_5_atm,
-      pm10_0_atm,
-      pm1_0_cf_1,
-      pm2_5_cf_1,
-      pm10_0_cf_1,
-      p_0_3_um,
-      p_0_5_um,
-      p_1_0_um,
-      p_2_5_um,
-      p_5_0_um,
-      p_10_0_um;
 
     
     while (TRUE)
@@ -405,10 +807,13 @@ static THD_FUNCTION(Thread4, arg) {
 	    error = 0;
 	    // the skip is because the way I have it hooked up right now
 	    // causes it to read whatever we send.
-	    chMBFetchTimeout(&RxMbx,&rxRow,TIME_INFINITE);
-	    rxPos = rxRow & 0xFF;
+	    chMBFetchTimeout(&RxMbx3,&rxRow,TIME_INFINITE);
+	    rxPos = rxRow & 0xFF;  // pos is actually the sensor number
 	    rxRow = rxRow >> 8;
-	    memcpy(lcltext,rx_text[rxRow],rxPos);
+	    if (rxPos==0)
+	      memcpy(lcltext,rx_text2[rxRow],32);
+	    else
+	      memcpy(lcltext,rx_text3[rxRow],32);
 	    // if the message is for us and the CRC matches - otherwise -
 	    // ignore.
 	    if (buildint(lcltext,0) != 0x424d)
@@ -418,42 +823,43 @@ static THD_FUNCTION(Thread4, arg) {
 	    
 	    
 	    value = 0;
-	    for (x=0;x<rxPos;x++)
+	    for (x=0;x<32;x++)
 	      {
-		chprintf((BaseSequentialStream*)&SD1,"%x ",lcltext[x]);
+		//chprintf((BaseSequentialStream*)&SD1,"%x ",lcltext[x]);
 		if (x<30)
 		  value = value + lcltext[x];
 	      }
-	    chprintf((BaseSequentialStream*)&SD1,"checksum %x  %x \r\n",value,buildint(lcltext,30));
+	    //chprintf((BaseSequentialStream*)&SD1,"checksum %x  %x \r\n",value,buildint(lcltext,30));
 	    if (buildint(lcltext,30) != value)
 	      continue;
-
-	    pm1_0_atm = buildint(lcltext,10);
-	    pm2_5_atm = buildint(lcltext,12);
-	    pm10_0_atm = buildint(lcltext,14);
-	    pm1_0_cf_1 = buildint(lcltext,4);
-	    pm2_5_cf_1 = buildint(lcltext,6);
-	    pm10_0_cf_1 = buildint(lcltext,8);
-	    p_0_3_um = buildint(lcltext,16);
-	    p_0_5_um = buildint(lcltext,18);
-	    p_1_0_um = buildint(lcltext,20);
-	    p_2_5_um = buildint(lcltext,22);
-	    p_5_0_um = buildint(lcltext,24);
-	    p_10_0_um = buildint(lcltext,26);
-
-	    chprintf(&SD1,"A: pm1_0_atm = %d,",pm1_0_atm);
-	    chprintf(&SD1,"pm2_5_atm = %d,",pm2_5_atm);
-	    chprintf(&SD1,"pm10_0_atm = %d,",pm10_0_atm);
-	    chprintf(&SD1,"pm1_0_cf_1 = %d,",pm1_0_cf_1);
-	    chprintf(&SD1,"pm2_5_cf_1 = %d,",pm2_5_cf_1);
-	    chprintf(&SD1,"pm10_0_cf_1 = %d,",pm10_0_cf_1);
-	    chprintf(&SD1,"p_0_3_um = %d,",p_0_3_um);
-	    chprintf(&SD1,"p_0_5_um = %d,",p_0_5_um);
-	    chprintf(&SD1,"p_1_0_um = %d,",p_1_0_um);
-	    chprintf(&SD1,"p_2_5_um = %d,",p_2_5_um);
-	    chprintf(&SD1,"p_5_0_um = %d,",p_5_0_um);
-	    chprintf(&SD1,"p_10_0_um = %d,\r\n",p_10_0_um);
-
+	    if (rxPos == 0) {
+		a_pm1_0_atm = buildint(lcltext,10);
+		a_pm2_5_atm = buildint(lcltext,12);
+		a_pm10_0_atm = buildint(lcltext,14);
+		a_pm1_0_cf_1 = buildint(lcltext,4);
+		a_pm2_5_cf_1 = buildint(lcltext,6);
+		a_pm10_0_cf_1 = buildint(lcltext,8);
+		a_p_0_3_um = buildint(lcltext,16);
+		a_p_0_5_um = buildint(lcltext,18);
+		a_p_1_0_um = buildint(lcltext,20);
+		a_p_2_5_um = buildint(lcltext,22);
+		a_p_5_0_um = buildint(lcltext,24);
+		a_p_10_0_um = buildint(lcltext,26);
+	      }
+	    else {
+		b_pm1_0_atm = buildint(lcltext,10);
+		b_pm2_5_atm = buildint(lcltext,12);
+		b_pm10_0_atm = buildint(lcltext,14);
+		b_pm1_0_cf_1 = buildint(lcltext,4);
+		b_pm2_5_cf_1 = buildint(lcltext,6);
+		b_pm10_0_cf_1 = buildint(lcltext,8);
+		b_p_0_3_um = buildint(lcltext,16);
+		b_p_0_5_um = buildint(lcltext,18);
+		b_p_1_0_um = buildint(lcltext,20);
+		b_p_2_5_um = buildint(lcltext,22);
+		b_p_5_0_um = buildint(lcltext,24);
+		b_p_10_0_um = buildint(lcltext,26);
+	    }	      
 
 	      
 	    
@@ -461,6 +867,13 @@ static THD_FUNCTION(Thread4, arg) {
 	}
 
 }
+
+
+
+
+
+
+
 
 static THD_WORKING_AREA(waThread5, 512);
 static THD_FUNCTION(Thread5, arg) {
@@ -478,6 +891,10 @@ static THD_FUNCTION(Thread5, arg) {
 
 
 
+
+
+
+
 uint8_t set_required_settings;
 
 
@@ -491,7 +908,6 @@ void adcSTM32EnableTSVREFE(void) {
 
 
 void feedWatchdog(){
-  return;
     if (!reset)
 	wdgReset(&WDGD1);
 }
@@ -612,10 +1028,11 @@ int main(void) {
 
   
   palSetPad(GPIOB, 5);
-  //wdgStart(&WDGD1, &wdgcfg);
-  //wdgReset(&WDGD1);
+  wdgStart(&WDGD1, &wdgcfg);
+  wdgReset(&WDGD1);
   chMBObjectInit(&RxMbx,&RxMbxBuff,MAILBOX_SIZE);
   chMBObjectInit(&RxMbx2,&RxMbxBuff2,MAILBOX_SIZE);
+  chMBObjectInit(&RxMbx3,&RxMbxBuff3,MAILBOX_SIZE);
   adcStart(&ADCD1, NULL);
   //  adcStart(&ADCD4, NULL);
   // I think this needs to go after the start - even though it worked fine before
@@ -633,7 +1050,9 @@ int main(void) {
 
 
 
-  
+  palSetPadMode(GPIOE, 0, PAL_MODE_OUTPUT_PUSHPULL);
+  palSetPadMode(GPIOE, 1, PAL_MODE_OUTPUT_PUSHPULL);    
+
   palSetPadMode(GPIOB, 6, PAL_MODE_ALTERNATE(7));  //USART1 - console  
   palSetPadMode(GPIOB, 7, PAL_MODE_ALTERNATE(7));
   palSetPadMode(GPIOA, 1, PAL_MODE_OUTPUT_PUSHPULL); // tx/rx
@@ -642,6 +1061,10 @@ int main(void) {
 
   palSetPadMode(GPIOD, 8, PAL_MODE_ALTERNATE(7));  //USART3 - particle sensor
   palSetPadMode(GPIOD, 9, PAL_MODE_ALTERNATE(7));
+
+
+  palSetPadMode(GPIOC, 10, PAL_MODE_ALTERNATE(5));  //USART4 - particle sensor
+  palSetPadMode(GPIOC, 11, PAL_MODE_ALTERNATE(5));
 
   
   palSetPadMode(GPIOB, 11, PAL_MODE_OUTPUT_PUSHPULL);      // spi2
@@ -654,10 +1077,29 @@ int main(void) {
   
   sdStart(&SD1,&uartCfg);
   sdStart(&SD3,&uartCfg2);
+  sdStart(&SD4,&uartCfg2);
 
   
 
 
+  if (*flash1 == 0xffff){
+      my_address = 65; // if flash hasn't been set up yet we default to
+                       // id 60, baud 9600
+      baud_rate=0;
+      chprintf((BaseSequentialStream*)&SD1,"Resetting Flash - I am # %d,%d\r\n",my_address,baud_rate);
+      write_flash((my_address&0xff),flash1);
+      chprintf((BaseSequentialStream*)&SD1,"ReadingFlash - I have # %x\r\n",*flash1);
+  }
+  else{
+      // flash has been written - use those values
+      // init saved values in case we only choose to reset
+      // just id or just address later.
+      my_address = (*flash1) & 0xff;
+      save_address = my_address;
+      baud_rate = ((*flash1) & 0xff00) >> 8;
+      save_baud_rate = baud_rate;
+
+  }
 
       
 
@@ -671,6 +1113,8 @@ int main(void) {
   init_spi();
   chprintf((BaseSequentialStream*)&SD1,"SPI init\r\n");
   
+  palSetPad(GPIOE, 0);     // Disable TX Light
+  palSetPad(GPIOE, 1);     // Disable RX Light
 
 
   
@@ -684,13 +1128,16 @@ int main(void) {
   feedWatchdog();
 
 
-
+  chThdCreateStatic(waThread1, sizeof(waThread1), NORMALPRIO, Thread1, NULL);
   chprintf((BaseSequentialStream*)&SD1,"HelloA\r\n")  ;
   chThdCreateStatic(waThread3, sizeof(waThread3), NORMALPRIO, Thread3, NULL);
   chprintf((BaseSequentialStream*)&SD1,"HelloB\r\n")  ;
   chThdCreateStatic(waThread4, sizeof(waThread4), NORMALPRIO, Thread4, NULL);
   chprintf((BaseSequentialStream*)&SD1,"HelloC\r\n")  ;
   chThdCreateStatic(waThread5, sizeof(waThread5), NORMALPRIO, Thread5, NULL);
+  chThdCreateStatic(waThread6, sizeof(waThread6), NORMALPRIO, Thread6, NULL);
+  chThdCreateStatic(waThread7, sizeof(waThread7), NORMALPRIO, Thread7, NULL);
+
 ;  
   uint32_t x,y;
   float VDD;
@@ -759,9 +1206,14 @@ rslt = bme680_init(&gas_sensor);
 	  rslt = bme680_get_sensor_data(&data, &gas_sensor);
 	  chprintf(&SD1,"T: %.2f degC, P: %.2f hPa, H %.2f %%rH ", data.temperature / 100.0f,
             data.pressure / 100.0f, data.humidity / 1000.0f );
+	  pressure = data.pressure/10;
+	  humidity = data.humidity/10;
+	  temp = data.temperature/10;
         /* Avoid using measurements from an unstable heating setup */
         if(data.status & BME680_GASM_VALID_MSK)
 	  chprintf(&SD1,", G: %d ohms", data.gas_resistance);
+	voc = data.gas_resistance/10;
+	
 	chprintf(&SD1,"\r\n");
 	
        }
