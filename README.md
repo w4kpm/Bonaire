@@ -1,4 +1,5 @@
-# Bonaire
+# Bonaire Envronmental Sensor
+
 Particulate Sensor / Pressure /Humidity /VOC sensor
 
 24v / Modbus - inital modbusid = 65 baud = 9600
@@ -7,6 +8,8 @@ uses low cost BME680 for pressure, humidity, temp and voc
 it also uses 2x pms5003 to measure particulate matter
 
 details about the parameters are in the PDF's of the individual sensors
+
+RS-485 and 24v are hooked up by 1 M12 connector 
 
 
 modbus registers:
